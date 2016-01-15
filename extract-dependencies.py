@@ -59,9 +59,9 @@ def extract_dependencies(content):
         if '#' in line:
             line = line.split("#", 1)[0].strip()
         if line.startswith('from'):  # from foo import bar
-            matches = re.findall("from (.*?)(?: import)", line)
+            matches = re.findall("from (\w*?)(?: import)", line)
         else:  # import foo
-            matches = re.findall("import (.*?)(?:$| as)", line)
+            matches = re.findall("import (\w*?)(?:$| as)", line)
         for match in matches:
             for x in match.split(','):
                 if not x.startswith('.'):
