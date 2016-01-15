@@ -114,9 +114,10 @@ def extract_package(name, client=DEFAULT_CLIENT, n=0):
 
 
 if __name__ == '__main__':
+    import random
     client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
     packages = client.list_packages()
-
+    random.shuffle(packages)
     for i, package in enumerate(packages):
         extract_package(package, client, i)
         if i > 15:
