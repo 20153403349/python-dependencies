@@ -53,29 +53,25 @@ def _extract_deps(content):
     #print(results)
     return results
 
-def _extract_setup_content(package_file):
-    """Extract setup.py content as string from downladed compressed file """
+def _extract_content(package_file):
+    """Extract content from compressed package - .py files only"""
     try:
         zip_file = zipfile.ZipFile(package_file)
     except:
         #print('trouble unzipping')
         return None
-    setup_candidates = [elem for elem in zip_file.namelist() if '.py' in elem]
-    if len(setup_candidates) >= 1:
-        setup_member = setup_candidates[0]
+    py_files = [elem for elem in zip_file.namelist() if '.py' in elem]
+    for py_file in py_files:
         try:
-            content = zip_file.read(setup_member).decode()
+            content = zip_file.read(py_file).decode()
+            yield content
         except:
             #print('trouble decoding')
-            return None
-        return content
-    else:
-        print("Too few candidates or too many for setup.py in tar")
-        return None
+            yield None
 
-def extract_package(name, client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi'), n="1"):
+def extract_package(name, client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi'), n="0"):
     tmpfilename = '/tmp/temp_py_package_{0}.zip'.format(n)
-    with open('pypi-deps.csv', 'a') as file:
+    with open('pypi-deps.txt', 'a') as file:
         spamwriter = csv.writer(file, delimiter='\t',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
         for release in client.package_releases(name):
@@ -90,14 +86,22 @@ def extract_package(name, client = xmlrpclib.ServerProxy('http://pypi.python.org
                 else:
                     with open(tmpfilename, 'wb') as zip_file:
                         zip_file.write(req.content)
+                    #print(compression_type(tmpfilename))
                     with open(tmpfilename, 'rb') as zip_file:
-                        content = _extract_setup_content(zip_file)
-                    if content:
-                        spamwriter.writerow([name, release, _extract_deps(content)])
+                        dependencies = []
+                        for content in _extract_content(zip_file):
+                            for dep in _extract_deps(content):
+                                if dep not in dependencies:
+                                    dependencies.append(dep)
+                        spamwriter.writerow([name, release, dependencies])
 
 # only one api server so we'll use the deutschland mirror for downloading
 client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
 packages = client.list_packages()
 
+n = 0
 for package in packages:
-    extract_package(package, client)
+    n += 1
+    extract_package(package, client, str(n))
+    if n >= 15:
+        break
