@@ -82,6 +82,9 @@ def _extract_content(package_file):
             yield content
         except:
             yield None
+    pyx_files = [elem for elem in filenames if elem.endswith('.pyx')]
+    if len(pyx_files) > 0:
+        yield 'import cython'
 
 
 DEFAULT_CLIENT = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
