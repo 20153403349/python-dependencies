@@ -54,7 +54,7 @@ def extract_dependencies(content):
                 line.startswith("import")):
             continue
         if (line.startswith('#') or line.startswith('"""') or
-                line.startswith("'''"):
+                line.startswith("'''")):
             continue
         if '#' in line:
             line = line.split("#", 1)[0].strip()
@@ -73,7 +73,6 @@ def _extract_content(package_file):
     try:
         zip_file = zipfile.ZipFile(package_file)
     except:
-        #print('trouble unzipping')
         return None
     py_files = [elem for elem in zip_file.namelist() if '.py' in elem]
     for py_file in py_files:
@@ -93,11 +92,13 @@ def extract_package(name, client=DEFAULT_CLIENT, n=0):
     with open('pypi-deps.txt', 'a') as file:
         spamwriter = csv.writer(file, delimiter='\t',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        releases = client.package_releases(name)
+        if len(releases) == 0:
+            return
         release = client.package_releases(name)[0]  # use only latest release
         doc = client.release_urls(name, release)
         if doc:
-            url = doc[0].get('url').replace("http://pypi.python.org/",
-                                            "http://f.pypi.python.org/")
+            url = doc[0].get('url')
             req = requests.get(url)
             if req.status_code != 200:
                 print("Could not download file %s" % req.status_code)
