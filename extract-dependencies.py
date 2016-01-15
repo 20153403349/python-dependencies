@@ -10,9 +10,30 @@
 import xmlrpc.client as xmlrpclib
 import re, requests, csv, zipfile
 
-# only one api server so we'll use the deutschland mirror for downloading
-client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
-packages = client.list_packages()
+def compression_type(filename):
+    """ Test which type of compressed file it is
+    adapted from http://stackoverflow.com/a/13044946 """
+
+    compression_dict = {
+        "\x1f\x8b\x08": "gz",
+        "\x42\x5a\x68": "bz2",
+        "\x50\x4b\x03\x04": "zip",
+        "\x1f\x9d": "tar"
+        }
+
+    max_len = max(len(x) for x in compression_dict)
+
+    try:
+        with open(filename) as f:
+            file_start = f.read(max_len)
+    except UnicodeDecodeError:
+        with open(filename, encoding="latin-1") as f:
+            file_start = f.read(max_len)
+
+    for sig, filetype in compression_dict.items():
+        if file_start.startswith(sig):
+            return filetype
+    return None
 
 def _extract_deps(content):
     """ Extract dependencies by parsing import statements"""
@@ -73,6 +94,10 @@ def extract_package(name, client = xmlrpclib.ServerProxy('http://pypi.python.org
                         content = _extract_setup_content(zip_file)
                     if content:
                         spamwriter.writerow([name, release, _extract_deps(content)])
+
+# only one api server so we'll use the deutschland mirror for downloading
+client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
+packages = client.list_packages()
 
 for package in packages:
     extract_package(package, client)
