@@ -1,11 +1,21 @@
-# This code was adapted from https://github.com/ogirardot/meta-deps/blob/master/PyPi%20Metadata.ipynb
-# The original code was licensed under the Creative Commons Attribution 3.0 Unported License.
-# To view a copy of that license, visit http://creativecommons.org/licenses/by/3.0/
-# Changes:
-# Reads import statements instead of dependencies listed in setup.py
-# Reads zip files instead of tar files
-# Doesn't produce graph
-# Removed json
+"""Get dependencies from packages on the Python Package Index (PyPI)
+
+Adapted from Olivier Girardot's notebook:
+
+https://github.com/ogirardot/meta-deps/blob/master/PyPi%20Metadata.ipynb
+
+licensed under the Creative Commons Attribution 3.0 Unported License.
+
+To view a copy of that license, visit
+http://creativecommons.org/licenses/by/3.0/
+
+Changes:
+- Read import statements in all .py files, instead of install_requires list in
+  setup.py
+- Read zip files instead of tar files
+- Don't produce graph
+- Remove json
+"""
 
 import xmlrpc.client as xmlrpclib
 import re, requests, csv, zipfile
