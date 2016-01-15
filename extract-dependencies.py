@@ -90,9 +90,9 @@ def _extract_content(package_file):
 DEFAULT_CLIENT = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
 
 
-def extract_package(name, client=DEFAULT_CLIENT, n=0):
+def extract_package(name, to='pypi-deps.txt', client=DEFAULT_CLIENT, n=0):
     tmpfilename = '/tmp/temp_py_package_{0}.tar.gz'.format(n)
-    with open('pypi-deps.txt', 'a') as fout:
+    with open(to, 'a') as fout:
         releases = client.package_releases(name)
         if len(releases) == 0:
             return
@@ -122,6 +122,4 @@ if __name__ == '__main__':
     packages = client.list_packages()
     random.shuffle(packages)
     for i, package in enumerate(packages):
-        extract_package(package, client, i)
-        if i > 15:
-            break
+        extract_package(package, to='pypi-deps.txt', client=client, n=i)
