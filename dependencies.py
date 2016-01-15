@@ -114,7 +114,8 @@ def extract_package(name, to='pypi-deps.txt', client=DEFAULT_CLIENT):
                     tar_file.write(req.content)
                 dependencies = set()
                 for content in _extract_content(tmpfilename):
-                    dependencies.update(extract_dependencies(content))
+                    if content is not None:
+                        dependencies.update(extract_dependencies(content))
                 for dep in dependencies:
                     fout.write(name + '\t' + dep + '\n')
 
