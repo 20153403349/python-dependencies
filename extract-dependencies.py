@@ -110,7 +110,7 @@ def extract_package(name, client=DEFAULT_CLIENT, n=0):
                     for content in _extract_content(zip_file):
                         dependencies.update(extract_dependencies(content))
                     for dep in dependencies:
-                        spamwriter.writerow([name, dep, release])
+                        spamwriter.writerow([name, dep])
 
 
 if __name__ == '__main__':
