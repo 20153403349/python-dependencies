@@ -45,23 +45,28 @@ def compression_type(filename):
             return filetype
     return None
 
-def _extract_deps(content):
-    """ Extract dependencies by parsing import statements"""
-    results = []
+def extract_dependencies(content):
+    """Extract dependencies by parsing import statements"""
+    deps = set()
     for line in content.split('\n'):
-        if line.lstrip().startswith("from") or line.lstrip().startswith("import"):
-            if '#' in line:
-                line = line.split("#",1)[0]
-            if 'from' in line:
-                matches = re.findall("from (.*?)(?: import)", line)
-            else:
-                matches = re.findall("import (.*?)(?:$| as)", line)
-            for match in matches:
-                for x in match.split(','):
-                    if x not in results and not x.startswith('.'):
-                        results.append(x)
-    #print(results)
-    return results
+        line = line.strip()  # we don't care about indentation
+        if not (line.startswith("from") or
+                line.startswith("import")):
+            continue
+        if (line.startswith('#') or line.startswith('"""') or
+                line.startswith("'''"):
+            continue
+        if '#' in line:
+            line = line.split("#", 1)[0].strip()
+        if line.startswith('from'):  # from foo import bar
+            matches = re.findall("from (.*?)(?: import)", line)
+        else:  # import foo
+            matches = re.findall("import (.*?)(?:$| as)", line)
+        for match in matches:
+            for x in match.split(','):
+                if not x.startswith('.'):
+                    deps.add(x)
+    return deps
 
 def _extract_content(package_file):
     """Extract content from compressed package - .py files only"""
@@ -84,26 +89,23 @@ def extract_package(name, client = xmlrpclib.ServerProxy('http://pypi.python.org
     with open('pypi-deps.txt', 'a') as file:
         spamwriter = csv.writer(file, delimiter='\t',
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        for release in client.package_releases(name):
-            #print "Extracting %s release %s" % (name, release)
-            doc = client.release_urls(name, release)
-            if doc:
-                url = doc[0].get('url').replace("http://pypi.python.org/", "http://f.pypi.python.org/")
-                #print "Downloading url %s" % url
-                req = requests.get(url)
-                if req.status_code != 200:
-                    print("Could not download file %s" % req.status_code)
-                else:
-                    with open(tmpfilename, 'wb') as zip_file:
-                        zip_file.write(req.content)
-                    #print(compression_type(tmpfilename))
-                    with open(tmpfilename, 'rb') as zip_file:
-                        dependencies = []
-                        for content in _extract_content(zip_file):
-                            for dep in _extract_deps(content):
-                                if dep not in dependencies:
-                                    dependencies.append(dep)
-                        spamwriter.writerow([name, release, dependencies])
+        release = client.package_releases(name)[0]  # use only latest release
+        doc = client.release_urls(name, release)
+        if doc:
+            url = doc[0].get('url').replace("http://pypi.python.org/",
+                                            "http://f.pypi.python.org/")
+            req = requests.get(url)
+            if req.status_code != 200:
+                print("Could not download file %s" % req.status_code)
+            else:
+                with open(tmpfilename, 'wb') as zip_file:
+                    zip_file.write(req.content)
+                with open(tmpfilename, 'rb') as zip_file:
+                    dependencies = set()
+                    for content in _extract_content(zip_file):
+                        dependencies.update(extract_dependencies(content))
+                    for dep in dependencies:
+                        spamwriter.writerow([name, dep, release])
 
 # only one api server so we'll use the deutschland mirror for downloading
 client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
