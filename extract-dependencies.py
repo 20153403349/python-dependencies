@@ -18,7 +18,7 @@ Changes:
 """
 
 import xmlrpc.client as xmlrpclib
-import re, requests, csv, zipfile
+import re, requests, csv, tarfile
 
 def compression_type(filename):
     """ Test which type of compressed file it is
@@ -71,16 +71,16 @@ def extract_dependencies(content):
 def _extract_content(package_file):
     """Extract content from compressed package - .py files only"""
     try:
-        zip_file = zipfile.ZipFile(package_file)
+        tar = tarfile.open(package_file)
     except:
         return None
-    py_files = [elem for elem in zip_file.namelist() if '.py' in elem]
+    filenames = tar.getnames()
+    py_files = [elem for elem in filenames if elem.endswith('.py')]
     for py_file in py_files:
         try:
-            content = zip_file.read(py_file).decode()
+            content = tar.extractfile(py_file).read().decode()
             yield content
         except:
-            #print('trouble decoding')
             yield None
 
 
@@ -88,29 +88,29 @@ DEFAULT_CLIENT = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
 
 
 def extract_package(name, client=DEFAULT_CLIENT, n=0):
-    tmpfilename = '/tmp/temp_py_package_{0}.zip'.format(n)
-    with open('pypi-deps.txt', 'a') as file:
-        spamwriter = csv.writer(file, delimiter='\t',
-                            quotechar='|', quoting=csv.QUOTE_MINIMAL)
+    tmpfilename = '/tmp/temp_py_package_{0}.tar.gz'.format(n)
+    with open('pypi-deps.txt', 'a') as fout:
         releases = client.package_releases(name)
         if len(releases) == 0:
             return
         release = client.package_releases(name)[0]  # use only latest release
-        doc = client.release_urls(name, release)
-        if doc:
-            url = doc[0].get('url')
+        docs = client.release_urls(name, release)
+        if len(docs) > 0:
+            for doc in docs:
+                if doc['packagetype'] == 'sdist':
+                    url = doc.get('url')
+                    break
             req = requests.get(url)
             if req.status_code != 200:
                 print("Could not download file %s" % req.status_code)
             else:
-                with open(tmpfilename, 'wb') as zip_file:
-                    zip_file.write(req.content)
-                with open(tmpfilename, 'rb') as zip_file:
-                    dependencies = set()
-                    for content in _extract_content(zip_file):
-                        dependencies.update(extract_dependencies(content))
-                    for dep in dependencies:
-                        spamwriter.writerow([name, dep])
+                with open(tmpfilename, 'wb') as tar_file:
+                    tar_file.write(req.content)
+                dependencies = set()
+                for content in _extract_content(tmpfilename):
+                    dependencies.update(extract_dependencies(content))
+                for dep in dependencies:
+                    fout.write(name + '\t' + dep + '\n')
 
 
 if __name__ == '__main__':
