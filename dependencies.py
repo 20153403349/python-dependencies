@@ -99,10 +99,13 @@ def extract_package(name, to='pypi-deps.txt', client=DEFAULT_CLIENT):
         release = client.package_releases(name)[0]  # use only latest release
         docs = client.release_urls(name, release)
         if len(docs) > 0:
+            url = None
             for doc in docs:
                 if doc['packagetype'] == 'sdist':
                     url = doc.get('url')
                     break
+            if url is None:
+                return
             req = requests.get(url)
             if req.status_code != 200:
                 print("Could not download file %s" % req.status_code)
