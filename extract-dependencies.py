@@ -84,7 +84,11 @@ def _extract_content(package_file):
             #print('trouble decoding')
             yield None
 
-def extract_package(name, client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi'), n="0"):
+
+DEFAULT_CLIENT = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
+
+
+def extract_package(name, client=DEFAULT_CLIENT, n=0):
     tmpfilename = '/tmp/temp_py_package_{0}.zip'.format(n)
     with open('pypi-deps.txt', 'a') as file:
         spamwriter = csv.writer(file, delimiter='\t',
@@ -107,13 +111,12 @@ def extract_package(name, client = xmlrpclib.ServerProxy('http://pypi.python.org
                     for dep in dependencies:
                         spamwriter.writerow([name, dep, release])
 
-# only one api server so we'll use the deutschland mirror for downloading
-client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
-packages = client.list_packages()
 
-n = 0
-for package in packages:
-    n += 1
-    extract_package(package, client, str(n))
-    if n >= 15:
-        break
+if __name__ == '__main__':
+    client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
+    packages = client.list_packages()
+
+    for i, package in enumerate(packages):
+        extract_package(package, client, i)
+        if i > 15:
+            break
