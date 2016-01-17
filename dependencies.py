@@ -93,7 +93,11 @@ DEFAULT_CLIENT = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
 def extract_package(name, to='pypi-deps.txt', client=DEFAULT_CLIENT):
     tmpfilename = '/tmp/temp_py_package.tar.gz'
     with open(to, 'a') as fout:
-        releases = client.package_releases(name)
+        try:
+            releases = client.package_releases(name)
+        except Exception as e:
+            print(e, "internet connection issues?")
+            return
         if len(releases) == 0:
             return
         release = client.package_releases(name)[0]  # use only latest release
