@@ -110,24 +110,50 @@ def extract_package(name, to='pypi-deps.txt', client=DEFAULT_CLIENT):
                     break
             if url is None:
                 return
-            req = requests.get(url)
-            if req.status_code != 200:
-                print("Could not download file %s" % req.status_code)
-            else:
-                with open(tmpfilename, 'wb') as tar_file:
-                    tar_file.write(req.content)
-                dependencies = set()
-                for content in _extract_content(tmpfilename):
-                    if content is not None:
-                        dependencies.update(extract_dependencies(content))
-                for dep in dependencies:
-                    fout.write(name + '\t' + dep + '\n')
+            try:
+                req = requests.get(url)
+                if req.status_code == 200:
+                    with open(tmpfilename, 'wb') as tar_file:
+                        tar_file.write(req.content)
+                    dependencies = set()
+                    for content in _extract_content(tmpfilename):
+                        if content is not None:
+                            dependencies.update(extract_dependencies(content))
+                    for dep in dependencies:
+                        fout.write(name + '\t' + dep + '\n')
 
+                else:
+                    print("Could not download {0}, status code {1}".format(url, req.status_code))
+            except ConnectionError:
+                print('ConnectionError: ', url)
 
 if __name__ == '__main__':
     import random
+
     client = xmlrpclib.ServerProxy('http://pypi.python.org/pypi')
+    to='pypi-deps.txt'
     packages = client.list_packages()
     random.shuffle(packages)
+
+    # Check if package is already in the output file (useful for restarting after a failure)
+    try:
+        with open(to, 'r') as fin:
+            done_packages = set([line.split()[0] for line in fin])
+    except FileNotFoundError:
+        done_packages = set()
+
+    # initalising variables for progress bar
+    i = 0
+    n = len(packages)
+    prev_percent_done = 0
+
     for package in packages:
-        extract_package(package, to='pypi-deps.txt', client=client)
+        if package not in done_packages:
+            extract_package(package, to=to, client=client)
+
+        # progress bar
+        i += 1
+        percent_done = round(i/n*100)
+        if percent_done > prev_percent_done:
+            print('{0}% done ({1} of {2})'.format(percent_done,i,n))
+            prev_percent_done = percent_done
