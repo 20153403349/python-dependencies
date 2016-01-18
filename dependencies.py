@@ -143,7 +143,7 @@ if __name__ == '__main__':
         done_packages = set()
 
     # initalising variables for progress bar
-    i = 0
+    i = len(done_packages)
     n = len(packages)
     prev_percent_done = 0
 
@@ -152,8 +152,8 @@ if __name__ == '__main__':
             extract_package(package, to=to, client=client)
 
         # progress bar
-        i += 1
         percent_done = round(i/n*100)
         if percent_done > prev_percent_done:
             print('{0}% done ({1} of {2})'.format(percent_done,i,n))
             prev_percent_done = percent_done
+        i += 1
