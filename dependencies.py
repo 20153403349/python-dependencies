@@ -150,10 +150,10 @@ if __name__ == '__main__':
     for package in packages:
         if package not in done_packages:
             extract_package(package, to=to, client=client)
+            i += 1 # for progress bar
 
         # progress bar
         percent_done = round(i/n*100)
         if percent_done > prev_percent_done:
             print('{0}% done ({1} of {2})'.format(percent_done,i,n))
             prev_percent_done = percent_done
-        i += 1
